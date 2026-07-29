@@ -6,7 +6,7 @@ var QR_CHECKIN_CONFIG = Object.freeze({
   timestampHeader: "Timestamp",
   preferredNameHeaders: ["Chi+Eng", "Name Chi", "Name Eng Proper"],
   logHeaders: ["Timestamp", "Code", "Name", "Source Row"],
-  checkedInRowColor: "#b7e1cd",
+  checkedInRowColor: "#81c995",
   lockTimeoutMs: 15000
 });
 

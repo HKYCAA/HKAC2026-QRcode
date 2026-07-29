@@ -220,6 +220,6 @@ test("successful roster update writes timestamp and colors the full row", () => 
   assert.deepEqual(operations, [
     ["value", 623, 6, timestamp],
     ["format", 623, 6, "yyyy-mm-dd hh:mm:ss"],
-    ["background", 623, 1, 1, 6, "#b7e1cd"]
+    ["background", 623, 1, 1, 6, "#81c995"]
   ]);
 });

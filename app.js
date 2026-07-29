@@ -194,8 +194,7 @@ async function initializeScanner() {
             Math.min(viewfinderWidth, viewfinderHeight) * 0.72
           );
           return { width: edge, height: edge };
-        },
-        aspectRatio: 4 / 3
+        }
       },
       onScanSuccess,
       onScanFailure

@@ -128,17 +128,13 @@ h2 {
 #reader {
   overflow: hidden;
   min-height: 15rem;
-  aspect-ratio: 4 / 3;
   border: 2px dashed #94a3b8 !important;
   border-radius: 1rem;
   background: #f8fafc;
 }
 
 #reader video {
-  width: 100% !important;
-  height: 100% !important;
   border-radius: 0.75rem;
-  object-fit: cover;
 }
 
 #reader button,
@@ -436,7 +432,6 @@ footer p {
 
   #reader {
     min-height: 0;
-    max-height: 17rem;
     border-radius: 0.75rem;
   }
 

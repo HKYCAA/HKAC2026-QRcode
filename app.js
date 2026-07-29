@@ -195,7 +195,7 @@ async function initializeScanner() {
           );
           return { width: edge, height: edge };
         },
-        aspectRatio: 1
+        aspectRatio: 4 / 3
       },
       onScanSuccess,
       onScanFailure

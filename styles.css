@@ -185,11 +185,21 @@ h2 {
   border-radius: 0.75rem;
   color: var(--ink);
   text-transform: uppercase;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .input-row input:focus {
   border-color: var(--cyan);
   outline: 3px solid rgba(8, 145, 178, 0.15);
+}
+
+.input-row input.scan-flash {
+  border-color: #22c55e;
+  background: #dcfce7;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.24);
 }
 
 .input-row button,

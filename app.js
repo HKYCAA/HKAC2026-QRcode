@@ -14,6 +14,7 @@ const elements = {
 let isProcessing = false;
 let ignoredScanCode = "";
 let lastSuccessfulScanAt = 0;
+let scanFlashTimer;
 let undoableCode = "";
 let scanner;
 
@@ -23,10 +24,32 @@ function setResult(presentation) {
   elements.resultDetail.textContent = presentation.detail;
 }
 
-function setProcessing(processing) {
+function syncSubmitAvailability() {
+  const hasCode = Boolean(normalizeScannedCode(elements.input.value));
+  elements.submit.disabled = isProcessing || !hasCode;
+}
+
+function setProcessing(processing, submittingCode = "") {
   isProcessing = processing;
-  elements.submit.disabled = processing;
+  elements.form.setAttribute("aria-busy", String(processing));
+  elements.submit.textContent =
+    processing && submittingCode
+      ? `Submitting ${submittingCode}…`
+      : "Check in";
+  syncSubmitAvailability();
   elements.undo.disabled = processing;
+}
+
+function flashScannedInput() {
+  window.clearTimeout(scanFlashTimer);
+  elements.input.classList.remove("scan-flash");
+
+  window.requestAnimationFrame(() => {
+    elements.input.classList.add("scan-flash");
+    scanFlashTimer = window.setTimeout(() => {
+      elements.input.classList.remove("scan-flash");
+    }, 1000);
+  });
 }
 
 function setUndoableCode(code) {
@@ -83,7 +106,7 @@ async function submitCode(rawCode) {
   ignoredScanCode = code;
   elements.input.value = "";
   setUndoableCode("");
-  setProcessing(true);
+  setProcessing(true, code);
   setResult({
     state: "loading",
     title: "Checking in…",
@@ -153,6 +176,8 @@ function onScanSuccess(decodedText) {
   }
 
   elements.input.value = code;
+  flashScannedInput();
+  syncSubmitAvailability();
 
   if (!isProcessing) {
     setResult({
@@ -213,8 +238,14 @@ elements.form.addEventListener("submit", event => {
   void submitCode(elements.input.value);
 });
 
+elements.input.addEventListener("input", () => {
+  elements.input.classList.remove("scan-flash");
+  syncSubmitAvailability();
+});
+
 elements.undo.addEventListener("click", () => {
   void undoCheckin();
 });
 
+syncSubmitAvailability();
 initializeScanner();

@@ -3,8 +3,10 @@ var QR_CHECKIN_CONFIG = Object.freeze({
   studentSheetName: "all",
   logSheetName: "qrcode-scan",
   codeHeader: "Code",
+  timestampHeader: "Timestamp",
   preferredNameHeaders: ["Chi+Eng", "Name Chi", "Name Eng Proper"],
   logHeaders: ["Timestamp", "Code", "Name", "Source Row"],
+  checkedInRowColor: "#b7e1cd",
   lockTimeoutMs: 15000
 });
 
@@ -57,7 +59,7 @@ function doPost(e) {
         return busyResponse_();
       }
 
-      return undoCheckin_(logSheet, requestedCode);
+      return undoCheckin_(studentSheet, logSheet, requestedCode);
     }
 
     if (request.action !== "checkin") {
@@ -117,9 +119,18 @@ function doPost(e) {
       });
     }
 
+    var checkinTime = new Date();
+    var timestampColumn = ensureRosterTimestampColumn_(studentSheet);
+
     logSheet
       .getRange(logSheet.getLastRow() + 1, 1, 1, 4)
-      .setValues([[new Date(), canonicalCode, studentName, sourceRow]]);
+      .setValues([[checkinTime, canonicalCode, studentName, sourceRow]]);
+    markStudentCheckedIn_(
+      studentSheet,
+      sourceRow,
+      timestampColumn,
+      checkinTime
+    );
     SpreadsheetApp.flush();
 
     return jsonResponse_({
@@ -264,7 +275,7 @@ function findLogMatch_(logSheet, code) {
     .findNext();
 }
 
-function undoCheckin_(logSheet, code) {
+function undoCheckin_(studentSheet, logSheet, code) {
   var match = findLogMatch_(logSheet, code);
 
   if (!match) {
@@ -279,8 +290,14 @@ function undoCheckin_(logSheet, code) {
   var values = logSheet.getRange(row, 1, 1, 4).getDisplayValues()[0];
   var canonicalCode = normalizeCode_(values[1]);
   var studentName = String(values[2] || "").trim();
+  var sourceRow = Number(values[3]);
 
   logSheet.deleteRow(row);
+
+  if (sourceRow >= 2 && sourceRow <= studentSheet.getLastRow()) {
+    clearStudentCheckin_(studentSheet, sourceRow);
+  }
+
   SpreadsheetApp.flush();
 
   return jsonResponse_({
@@ -289,6 +306,59 @@ function undoCheckin_(logSheet, code) {
     code: canonicalCode,
     name: studentName
   });
+}
+
+function ensureRosterTimestampColumn_(studentSheet) {
+  var lastColumn = studentSheet.getLastColumn();
+  var headers = studentSheet
+    .getRange(1, 1, 1, lastColumn)
+    .getDisplayValues()[0];
+  var timestampColumn = findHeaderColumn_(headers, [
+    QR_CHECKIN_CONFIG.timestampHeader
+  ]);
+
+  if (timestampColumn !== -1) {
+    return timestampColumn + 1;
+  }
+
+  timestampColumn = lastColumn + 1;
+  studentSheet
+    .getRange(1, timestampColumn)
+    .setValue(QR_CHECKIN_CONFIG.timestampHeader);
+
+  return timestampColumn;
+}
+
+function markStudentCheckedIn_(
+  studentSheet,
+  sourceRow,
+  timestampColumn,
+  checkinTime
+) {
+  studentSheet
+    .getRange(sourceRow, timestampColumn)
+    .setValue(checkinTime)
+    .setNumberFormat("yyyy-mm-dd hh:mm:ss");
+  studentSheet
+    .getRange(sourceRow, 1, 1, studentSheet.getLastColumn())
+    .setBackground(QR_CHECKIN_CONFIG.checkedInRowColor);
+}
+
+function clearStudentCheckin_(studentSheet, sourceRow) {
+  var headers = studentSheet
+    .getRange(1, 1, 1, studentSheet.getLastColumn())
+    .getDisplayValues()[0];
+  var timestampColumn = findHeaderColumn_(headers, [
+    QR_CHECKIN_CONFIG.timestampHeader
+  ]);
+
+  if (timestampColumn !== -1) {
+    studentSheet.getRange(sourceRow, timestampColumn + 1).clearContent();
+  }
+
+  studentSheet
+    .getRange(sourceRow, 1, 1, studentSheet.getLastColumn())
+    .setBackground(null);
 }
 
 function busyResponse_() {

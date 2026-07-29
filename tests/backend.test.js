@@ -129,12 +129,97 @@ test("undo removes the matching attendance row", () => {
       rows.splice(row - 1, 1);
     }
   };
+  const rosterOperations = [];
+  const studentSheet = {
+    getLastRow() {
+      return 1601;
+    },
+    getLastColumn() {
+      return 6;
+    },
+    getRange(row, column, rowCount, columnCount) {
+      if (row === 1) {
+        return {
+          getDisplayValues() {
+            return [["YC", "Code", "Name Chi", "Chi+Eng", "School", "Timestamp"]];
+          }
+        };
+      }
 
-  const response = context.undoCheckin_(logSheet, "YDQ0621");
+      return {
+        clearContent() {
+          rosterOperations.push(["clear", row, column]);
+          return this;
+        },
+        setBackground(color) {
+          rosterOperations.push([
+            "background",
+            row,
+            column,
+            rowCount,
+            columnCount,
+            color
+          ]);
+          return this;
+        }
+      };
+    }
+  };
+
+  const response = context.undoCheckin_(
+    studentSheet,
+    logSheet,
+    "YDQ0621"
+  );
   const payload = JSON.parse(response.body);
 
   assert.equal(payload.status, "undone");
   assert.equal(payload.code, "YDQ0621");
   assert.equal(payload.name, "盧珮淇 Asante, Judith Badu");
   assert.equal(rows.length, 1);
+  assert.deepEqual(rosterOperations, [
+    ["clear", 623, 6],
+    ["background", 623, 1, 1, 6, null]
+  ]);
+});
+
+test("successful roster update writes timestamp and colors the full row", () => {
+  const operations = [];
+  const studentSheet = {
+    getLastColumn() {
+      return 6;
+    },
+    getRange(row, column, rowCount, columnCount) {
+      return {
+        setValue(value) {
+          operations.push(["value", row, column, value]);
+          return this;
+        },
+        setNumberFormat(format) {
+          operations.push(["format", row, column, format]);
+          return this;
+        },
+        setBackground(color) {
+          operations.push([
+            "background",
+            row,
+            column,
+            rowCount,
+            columnCount,
+            color
+          ]);
+          return this;
+        }
+      };
+    }
+  };
+  const timestamp = new Date("2026-07-29T10:30:00.000Z");
+
+  context.markStudentCheckedIn_(studentSheet, 623, 6, timestamp);
+
+  assert.deepEqual(operations, [
+    ["value", 623, 6, timestamp],
+    ["format", 623, 6, "yyyy-mm-dd hh:mm:ss"],
+    ["background", 623, 1, 1, 6, "#b7e1cd"]
+  ]);
 });

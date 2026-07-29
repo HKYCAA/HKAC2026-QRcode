@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>HKAC 2026 QR Check-in — Build and Operations Runbook</title>
+    <style>
+      :root {
+        --ink: #102a43;
+        --muted: #52667a;
+        --navy: #073b5c;
+        --cyan: #0891b2;
+        --line: #ccd8e3;
+        --paper: #ffffff;
+        --page: #eef5f9;
+        --good: #176b3a;
+        --good-bg: #e7f7ed;
+        --warn: #8a4b08;
+        --warn-bg: #fff4d6;
+        --danger: #9f2d2d;
+        --danger-bg: #fff0f0;
+        --code: #f3f7fa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      a {
+        color: #056b8c;
+      }
+
+      code,
+      pre {
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      }
+
+      code {
+        padding: 0.12rem 0.3rem;
+        border-radius: 0.3rem;
+        background: var(--code);
+        font-size: 0.92em;
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 0.8rem 0;
+        padding: 1rem;
+        border: 1px solid var(--line);
+        border-radius: 0.75rem;
+        background: var(--code);
+        color: #15344d;
+        font-size: 0.86rem;
+        line-height: 1.5;
+      }
+
+      .page {
+        width: min(100% - 2rem, 72rem);
+        margin: 2rem auto;
+      }
+
+      header,
+      section,
+      nav {
+        margin-bottom: 1rem;
+        padding: clamp(1.15rem, 3vw, 2rem);
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        background: var(--paper);
+        box-shadow: 0 0.5rem 1.8rem rgb(33 61 85 / 7%);
+      }
+
+      header {
+        border-top: 0.45rem solid var(--cyan);
+      }
+
+      .eyebrow {
+        margin: 0 0 0.3rem;
+        color: var(--cyan);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: var(--navy);
+        line-height: 1.2;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.9rem, 5vw, 3.2rem);
+      }
+
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1.55rem;
+      }
+
+      h3 {
+        margin: 1.4rem 0 0.45rem;
+        font-size: 1.08rem;
+      }
+
+      p {
+        margin: 0.5rem 0;
+      }
+
+      ul,
+      ol {
+        padding-left: 1.35rem;
+      }
+
+      li + li {
+        margin-top: 0.35rem;
+      }
+
+      nav ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: 0.45rem 1.5rem;
+        margin: 0;
+        padding-left: 1.2rem;
+      }
+
+      .meta,
+      .small {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+
+      .flow div {
+        padding: 0.8rem;
+        border-radius: 0.75rem;
+        background: #edf8fb;
+        text-align: center;
+        font-weight: 750;
+      }
+
+      .callout {
+        margin: 1rem 0;
+        padding: 0.9rem 1rem;
+        border-left: 0.35rem solid;
+        border-radius: 0.45rem;
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 0.15rem;
+      }
+
+      .confirmed {
+        border-color: var(--good);
+        background: var(--good-bg);
+      }
+
+      .warning {
+        border-color: var(--warn);
+        background: var(--warn-bg);
+      }
+
+      .danger {
+        border-color: var(--danger);
+        background: var(--danger-bg);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0.8rem 0;
+        font-size: 0.93rem;
+      }
+
+      th,
+      td {
+        padding: 0.65rem;
+        border: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #edf4f8;
+        color: var(--navy);
+      }
+
+      .checklist {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .checklist li::before {
+        margin-right: 0.55rem;
+        color: var(--good);
+        content: "□";
+        font-weight: 900;
+      }
+
+      footer {
+        padding: 1rem;
+        color: var(--muted);
+        text-align: center;
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 45rem) {
+        .page {
+          width: min(100% - 1rem, 72rem);
+          margin: 0.5rem auto;
+        }
+
+        header,
+        section,
+        nav {
+          padding: 1rem;
+          border-radius: 0.75rem;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+        }
+      }
+
+      @media print {
+        body {
+          background: white;
+          font-size: 10.5pt;
+        }
+
+        .page {
+          width: 100%;
+          margin: 0;
+        }
+
+        header,
+        section,
+        nav {
+          break-inside: avoid;
+          border-color: #aaa;
+          box-shadow: none;
+        }
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <p class="eyebrow">Internal technical runbook</p>
+        <h1>HKAC 2026 QR Check-in System</h1>
+        <p>
+          How the scanner was built, how it should be changed and deployed,
+          and the key lessons from the implementation and iPhone debugging.
+        </p>
+        <p class="meta">
+          Current as of 29 July 2026 · Frontend on GitHub Pages · Backend on
+          Google Apps Script · Google Sheet database
+        </p>
+      </header>
+
+      <nav aria-label="Contents">
+        <h2>Contents</h2>
+        <ul>
+          <li><a href="#architecture">Architecture and data flow</a></li>
+          <li><a href="#sheet">Google Sheet rules</a></li>
+          <li><a href="#frontend">Scanner behavior</a></li>
+          <li><a href="#backend">Apps Script behavior</a></li>
+          <li><a href="#findings">Key findings and mistakes to avoid</a></li>
+          <li><a href="#testing">Safe testing checklist</a></li>
+          <li><a href="#deployment">Deployment process</a></li>
+          <li><a href="#recovery">Troubleshooting and recovery</a></li>
+        </ul>
+      </nav>
+
+      <section id="architecture">
+        <h2>1. Architecture and data flow</h2>
+        <div class="flow" aria-label="System data flow">
+          <div>Phone camera or manual entry</div>
+          <div>GitHub Pages frontend</div>
+          <div>Apps Script <code>doPost</code></div>
+          <div>Google Sheet</div>
+        </div>
+
+        <ol>
+          <li>
+            <code>html5-qrcode</code> scans locally in the phone browser.
+          </li>
+          <li>
+            The frontend extracts only the unique code and displays it in the
+            input field. Scanning alone does not record attendance.
+          </li>
+          <li>
+            The operator reviews the code and presses <strong>Check in</strong>.
+          </li>
+          <li>
+            The frontend sends a form-encoded POST request to Apps Script.
+          </li>
+          <li>
+            Apps Script finds an exact code match, prevents duplicates, writes
+            attendance, timestamps the roster row, and colors it green.
+          </li>
+        </ol>
+
+        <p>
+          Live scanner:
+          <a href="https://hkycaa.github.io/HKAC2026-QRcode/">
+            hkycaa.github.io/HKAC2026-QRcode/
+          </a>
+        </p>
+      </section>
+
+      <section id="sheet">
+        <h2>2. Google Sheet rules</h2>
+
+        <h3>Source tab: <code>all</code></h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Purpose</th>
+              <th>Write rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Code</code></td>
+              <td>Unique student code generated by an array formula</td>
+              <td><strong>Never write to or clear this column.</strong></td>
+            </tr>
+            <tr>
+              <td><code>Chi+Eng</code></td>
+              <td>Preferred student display name</td>
+              <td>Read only</td>
+            </tr>
+            <tr>
+              <td><code>Timestamp</code></td>
+              <td>Arrival date and time</td>
+              <td>Written on check-in; cleared on undo</td>
+            </tr>
+            <tr>
+              <td>Student row background</td>
+              <td>Visible checked-in state</td>
+              <td>
+                Set to saturated green <code>#81c995</code> on check-in;
+                cleared on undo
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Attendance tab: <code>qrcode-scan</code></h3>
+        <p>The header order is a backend contract and must remain:</p>
+        <pre>Timestamp | Code | Name | Source Row</pre>
+
+        <div class="callout danger">
+          <strong>Do not rename or reorder these four log headers.</strong>
+          Apps Script deliberately rejects an unexpected schema instead of
+          writing attendance into the wrong columns.
+        </div>
+      </section>
+
+      <section id="frontend">
+        <h2>3. Frontend scanner behavior</h2>
+
+        <ul>
+          <li>
+            Requests the rear camera with
+            <code>{ facingMode: "environment" }</code>.
+          </li>
+          <li>
+            Supports raw payloads such as
+            <code>YDQ0621 Chinese Name English Name</code> by taking only the
+            first whitespace-separated token.
+          </li>
+          <li>
+            Supports QR URLs containing a <code>code</code> query parameter.
+          </li>
+          <li>Trims and uppercases the code before submission.</li>
+          <li>
+            Places scans in the input and flashes it green so the operator
+            notices when a new QR code replaces the previous one.
+          </li>
+          <li>
+            Requires the operator to press <strong>Check in</strong>; it never
+            auto-submits a scan.
+          </li>
+          <li>
+            Snapshots the submitted code before sending it. A new scan can
+            appear while the previous request is processing without changing
+            the code already being submitted.
+          </li>
+          <li>
+            Shows the exact in-flight code on the button:
+            <code>Submitting YDQ0621…</code>.
+          </li>
+          <li>
+            Keeps the camera running during network requests so the next QR
+            code can be prepared.
+          </li>
+        </ul>
+
+        <div class="callout confirmed">
+          <strong>Wrong-submission protection</strong>
+          Manual confirmation, the flashing input, the in-flight code on the
+          button, exact backend matching, and duplicate detection work together.
+          Do not remove one of these protections merely to save a tap.
+        </div>
+      </section>
+
+      <section id="backend">
+        <h2>4. Apps Script backend behavior</h2>
+
+        <p>
+          The production backend is the standalone <code>qrcode-scan</code>
+          Apps Script project. It exposes one <code>doPost</code> entry point
+          and executes as the deployment owner.
+        </p>
+
+        <h3>Successful check-in</h3>
+        <ol>
+          <li>Normalize and validate the request.</li>
+          <li>Open the spreadsheet by its fixed ID.</li>
+          <li>Verify the source and log tabs exist.</li>
+          <li>Verify the exact attendance log schema.</li>
+          <li>Locate the <code>Code</code> and preferred name headers.</li>
+          <li>Find an exact, case-insensitive, whole-cell code match.</li>
+          <li>Acquire the script lock.</li>
+          <li>Reject a duplicate found in <code>qrcode-scan</code>.</li>
+          <li>Append the attendance log entry.</li>
+          <li>
+            Write the same time to the roster <code>Timestamp</code> cell and
+            color the populated student row green.
+          </li>
+        </ol>
+
+        <h3>Undo</h3>
+        <p>
+          Undo finds the active log entry, deletes it, uses its stored
+          <code>Source Row</code> to locate the roster student, clears the
+          roster timestamp, and removes the green background.
+        </p>
+
+        <h3>Response contract</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Meaning</th>
+              <th>Frontend message</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>success</code></td>
+              <td>Attendance recorded</td>
+              <td>Successfully checked in, code and name</td>
+            </tr>
+            <tr>
+              <td><code>duplicate</code></td>
+              <td>Code already exists in the log</td>
+              <td>Already checked in</td>
+            </tr>
+            <tr>
+              <td><code>invalid</code></td>
+              <td>No exact roster match</td>
+              <td>Invalid code</td>
+            </tr>
+            <tr>
+              <td><code>undone</code></td>
+              <td>Attendance and roster state removed</td>
+              <td>Check-in undone</td>
+            </tr>
+            <tr>
+              <td><code>error</code></td>
+              <td>Configuration, permission, lock, or server failure</td>
+              <td>Unable to check in</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="findings">
+        <h2>5. Key findings and mistakes to avoid</h2>
+
+        <h3>Confirmed: compact camera CSS broke iPhone scanning</h3>
+        <div class="callout warning">
+          The iPhone Safari camera preview remained visible, but QR callbacks
+          stopped after aggressive one-screen mobile styling changed the
+          scanner/video geometry. Rolling back those compact UI rules restored
+          scanning.
+        </div>
+        <ul>
+          <li>
+            Keep <code>#reader</code> with a real minimum height and allow the
+            library to manage the video’s natural dimensions.
+          </li>
+          <li>
+            Keep the scanner <code>aspectRatio: 1</code> and calculate
+            <code>qrbox</code> from the actual viewfinder dimensions.
+          </li>
+          <li>
+            Do not force the scanner video into a tiny fixed-height container.
+          </li>
+          <li>
+            Do not add aggressive <code>object-fit</code>, transforms, clipping,
+            or repeated width/height overrides without testing real iPhone
+            Safari scanning.
+          </li>
+          <li>
+            A visible preview proves camera permission and playback only. It
+            does <strong>not</strong> prove QR frame detection works.
+          </li>
+        </ul>
+
+        <h3>Confirmed: scanner callbacks must not submit automatically</h3>
+        <p>
+          A QR payload can include both the unique code and names. The safe
+          design extracts the first token, shows it to the operator, and waits
+          for confirmation. Submitting the full QR text will fail exact matching.
+        </p>
+
+        <h3>Confirmed: do not pause the camera during a POST</h3>
+        <p>
+          Pausing after every check-in adds delay and extra clicks. Keep the
+          camera active, but snapshot the code being submitted so a subsequent
+          scan cannot alter the in-flight request.
+        </p>
+
+        <h3>Confirmed: Apps Script deployment version matters</h3>
+        <p>
+          <code>clasp push</code> updates project source but does not by itself
+          move the fixed production web-app deployment to the new version.
+          Update the existing deployment ID after every backend change.
+        </p>
+
+        <h3>Confirmed: Google redirect handling can mislead command-line tests</h3>
+        <p>
+          For an Apps Script POST smoke test, use <code>curl -L --data</code>
+          without forcing <code>-X POST</code>. Forcing POST across Google’s
+          redirect can return a generic Drive “Page not found” page even when
+          the deployment is healthy.
+        </p>
+        <pre>curl -sS -L \
+  --data 'action=checkin&amp;code=CODEX-SMOKE-INVALID' \
+  'https://script.google.com/macros/s/DEPLOYMENT_ID/exec'</pre>
+
+        <h3>Suspected, not proven: mixed browser cache after Pages updates</h3>
+        <div class="callout warning">
+          A temporarily broken button was consistent with cached GitHub Pages
+          assets, but the cache hypothesis was not proven and no cache-busting
+          change was deployed. First hard-refresh or reopen the site and inspect
+          the loaded HTML/JavaScript versions before changing working logic.
+        </div>
+      </section>
+
+      <section id="testing">
+        <h2>6. Safe testing checklist</h2>
+
+        <h3>Before every deployment</h3>
+        <pre>npm test
+npm run check
+git diff --check
+git diff
+clasp status
+clasp show-authorized-user</pre>
+
+        <h3>Functional checks</h3>
+        <ul class="checklist">
+          <li>Android rear camera opens and recognizes a valid QR.</li>
+          <li>iPhone Safari preview opens and recognizes a valid QR.</li>
+          <li>QR code plus names produces only the leading unique code.</li>
+          <li>A second scan replaces and flashes the input.</li>
+          <li>No attendance is recorded until Check in is pressed.</li>
+          <li>The button shows the code currently being submitted.</li>
+          <li>A valid check-in returns code first, then student name.</li>
+          <li>The roster timestamp is populated with arrival date/time.</li>
+          <li>The full populated roster row becomes green.</li>
+          <li>A duplicate reports Already checked in and adds no second log.</li>
+          <li>An invalid code adds no attendance record.</li>
+          <li>Undo removes the log, timestamp, and green highlight.</li>
+          <li>The array-formula <code>Code</code> column remains unchanged.</li>
+        </ul>
+
+        <div class="callout danger">
+          <strong>Never use a real student code for an unattended smoke test.</strong>
+          Use a deliberately impossible code and expect
+          <code>{"status":"invalid","message":"Invalid code"}</code>. A real
+          code changes live attendance.
+        </div>
+      </section>
+
+      <section id="deployment">
+        <h2>7. Deployment process</h2>
+
+        <h3>Backend: Google Apps Script</h3>
+        <ol>
+          <li>
+            Confirm <code>.clasp.json</code> points to the dedicated
+            <code>qrcode-scan</code> project.
+          </li>
+          <li>Confirm the authorized Google account.</li>
+          <li>Review exactly which files <code>clasp</code> will upload.</li>
+          <li>Push the source.</li>
+          <li>
+            Update the existing production deployment ID; do not create a new
+            public URL unless intentionally migrating the frontend.
+          </li>
+          <li>Confirm <code>clasp deployments</code> shows the new version.</li>
+          <li>Run only the invalid-code production smoke test.</li>
+        </ol>
+
+        <pre>clasp show-authorized-user
+clasp status
+clasp push
+clasp create-deployment \
+  --deploymentId AKfycbwLMXogTicd0GZK6tu0X8VxHIu-7_B7i8cKlC0FvHFvouslFSABxQOAo1nZqK2woSrc \
+  --description "Describe the backend change"
+clasp deployments</pre>
+
+        <p class="small">
+          Current production Apps Script deployment is version 6 at the time
+          this runbook was written.
+        </p>
+
+        <h3>Frontend: GitHub Pages</h3>
+        <ol>
+          <li>Run tests and syntax checks.</li>
+          <li>Commit only the intended files.</li>
+          <li>Push <code>main</code> to the GitHub repository.</li>
+          <li>Wait for GitHub Pages to publish.</li>
+          <li>
+            Reopen the live HTTPS site and test on both Android and iPhone
+            Safari. Do not rely on desktop camera emulation.
+          </li>
+        </ol>
+
+        <div class="callout warning">
+          If a backend deployment URL ever changes, update
+          <code>config.js</code> before publishing the frontend. Otherwise the
+          site will continue calling the old Apps Script deployment.
+        </div>
+      </section>
+
+      <section id="recovery">
+        <h2>8. Troubleshooting and recovery</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Symptom</th>
+              <th>Check first</th>
+              <th>Safe response</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Camera preview visible but no scan on iPhone</td>
+              <td>Recent scanner/video CSS and actual Safari behavior</td>
+              <td>
+                Revert geometry changes to the last known working scanner
+                layout; retain natural video sizing and <code>aspectRatio: 1</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Manual Check in button appears inactive</td>
+              <td>Whether a normalized code exists and whether a request is active</td>
+              <td>
+                Hard-refresh first, then inspect the loaded asset versions and
+                <code>syncSubmitAvailability()</code>
+              </td>
+            </tr>
+            <tr>
+              <td>“Unable to check in” for every code</td>
+              <td>Network, Apps Script URL, deployment version, and authorization</td>
+              <td>
+                Run the invalid-code curl smoke test and review Apps Script logs
+              </td>
+            </tr>
+            <tr>
+              <td>Valid student reported invalid</td>
+              <td>Exact <code>Code</code> value and header name</td>
+              <td>
+                Compare normalized code with the displayed sheet value; never
+                loosen matching to partial text
+              </td>
+            </tr>
+            <tr>
+              <td>Duplicate check-ins appear</td>
+              <td>Script lock and <code>qrcode-scan</code> Code column</td>
+              <td>
+                Preserve duplicate checking and the lock around check-and-write
+              </td>
+            </tr>
+            <tr>
+              <td>Roster row remains green after undo</td>
+              <td>Stored <code>Source Row</code> and roster <code>Timestamp</code></td>
+              <td>
+                Verify the log schema and undo response before editing the row
+                manually
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Rollback rule</h3>
+        <p>
+          Roll back the smallest responsible layer. A camera regression should
+          first revert scanner/UI geometry, not the attendance backend. A sheet
+          write regression should update Apps Script, not the working camera
+          layout. Re-run the same device-specific test after rollback.
+        </p>
+      </section>
+
+      <footer>
+        HKAC 2026 internal use · Keep this runbook updated whenever the scanner,
+        Sheet schema, or production deployment changes.
+      </footer>
+    </main>
+  </body>
+</html>

@@ -29,6 +29,8 @@ The source `Code` column is read-only. The backend never writes to it.
 - `core.js` — frontend code normalization and result messages.
 - `config.js` — deployed Apps Script web app URL.
 - `QRCheckin.js` — `doPost` check-in backend.
+- [`docs/check-in-system-runbook.html`](docs/check-in-system-runbook.html) —
+  complete build, deployment, troubleshooting, and future-regression runbook.
 - `Code.js`, `ecert.js` — archived utilities from the original bound project;
   `.claspignore` excludes them from the check-in deployment.
 - `appsscript.json` — Apps Script manifest and public web-app configuration.

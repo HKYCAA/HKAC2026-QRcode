@@ -14,14 +14,6 @@
   </head>
   <body>
     <main class="app-shell">
-      <header class="hero">
-        <p class="eyebrow">HKAC 2026</p>
-        <h1>Event check-in</h1>
-        <p class="hero-copy">
-          Scan a student's QR code, review the code, then check in.
-        </p>
-      </header>
-
       <section class="panel scanner-panel" aria-labelledby="scanner-title">
         <div class="section-heading">
           <div>
@@ -32,22 +24,9 @@
         </div>
 
         <div id="reader" aria-label="QR code camera scanner"></div>
-        <p class="privacy-note">
-          Camera processing stays on this device. The code is sent only after
-          you press Check in.
-        </p>
-      </section>
-
-      <section class="panel manual-panel" aria-labelledby="manual-title">
-        <div class="section-heading">
-          <div>
-            <p class="step-label">Confirm</p>
-            <h2 id="manual-title">Review or enter code</h2>
-          </div>
-        </div>
 
         <form id="manual-form" class="manual-form" novalidate>
-          <label for="manual-code">Unique code</label>
+          <label for="manual-code">Scanned or manual code</label>
           <div class="input-row">
             <input
               id="manual-code"
@@ -63,6 +42,11 @@
             <button id="manual-submit" type="submit">Check in</button>
           </div>
         </form>
+
+        <p class="privacy-note">
+          Camera processing stays on this device. The code is sent only after
+          you press Check in.
+        </p>
       </section>
 
       <section
@@ -84,10 +68,6 @@
         Undo check-in
       </button>
     </main>
-
-    <footer>
-      <p>HKAC 2026 attendance desk</p>
-    </footer>
 
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script type="module" src="./app.js"></script>

@@ -167,6 +167,10 @@ h2 {
   font-weight: 700;
 }
 
+.scanner-panel .manual-form {
+  margin-top: 0.85rem;
+}
+
 .input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

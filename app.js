@@ -114,38 +114,58 @@ function resetForNextScan() {
 }
 
 function onScanSuccess(decodedText) {
-  void submitCode(decodedText);
+  if (isProcessing) {
+    return;
+  }
+
+  const code = normalizeScannedCode(decodedText);
+
+  if (!code || elements.input.value === code) {
+    return;
+  }
+
+  elements.input.value = code;
+  setResult({
+    state: "idle",
+    title: "Code ready",
+    detail: `${code} — press Check in to record attendance.`
+  });
 }
 
-function initializeScanner() {
-  if (!window.Html5QrcodeScanner) {
+async function initializeScanner() {
+  if (!window.Html5Qrcode) {
     setResult(resultPresentation({ status: "error" }));
     elements.resultDetail.textContent =
       "The camera scanner could not load. Use manual entry.";
     return;
   }
 
-  scanner = new window.Html5QrcodeScanner(
-    "reader",
-    {
-      fps: 10,
-      qrbox(viewfinderWidth, viewfinderHeight) {
-        const edge = Math.floor(
-          Math.min(viewfinderWidth, viewfinderHeight) * 0.72
-        );
-        return { width: edge, height: edge };
-      },
-      aspectRatio: 1,
-      rememberLastUsedCamera: true,
-      showTorchButtonIfSupported: true,
-      supportedScanTypes: [
-        window.Html5QrcodeScanType.SCAN_TYPE_CAMERA
-      ]
-    },
-    false
-  );
+  scanner = new window.Html5Qrcode("reader", {
+    formatsToSupport: [window.Html5QrcodeSupportedFormats.QR_CODE]
+  });
 
-  scanner.render(onScanSuccess, () => {});
+  try {
+    await scanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox(viewfinderWidth, viewfinderHeight) {
+          const edge = Math.floor(
+            Math.min(viewfinderWidth, viewfinderHeight) * 0.72
+          );
+          return { width: edge, height: edge };
+        },
+        aspectRatio: 1
+      },
+      onScanSuccess,
+      () => {}
+    );
+  } catch (error) {
+    console.error("Camera could not start", error);
+    setResult(resultPresentation({ status: "error" }));
+    elements.resultDetail.textContent =
+      "Allow camera access or use manual entry.";
+  }
 }
 
 elements.form.addEventListener("submit", event => {

@@ -6,11 +6,14 @@ Apps Script web app.
 
 ## How it works
 
-1. `html5-qrcode` scans a QR code in the attendee's phone browser.
-2. The frontend posts the unique code to the Apps Script `doPost` endpoint.
-3. Apps Script finds the code in `all!Code` in **HKAC 2026 full list**.
-4. A successful check-in is appended to the `qrcode-scan` tab.
-5. A script lock makes simultaneous scans safe and prevents duplicate rows.
+1. `html5-qrcode` starts with the rear camera and scans a QR code in the
+   attendee's phone browser.
+2. The frontend extracts the leading unique code and places it in the input.
+3. The operator reviews the code and presses **Check in**.
+4. The frontend posts the unique code to the Apps Script `doPost` endpoint.
+5. Apps Script finds the code in `all!Code` in **HKAC 2026 full list**.
+6. A successful check-in is appended to the `qrcode-scan` tab.
+7. A script lock makes simultaneous scans safe and prevents duplicate rows.
 
 The source `Code` column is read-only. The backend never writes to it.
 
@@ -116,7 +119,11 @@ Live site: <https://hkycaa.github.io/HKAC2026-QRcode/>
 
 ## Event-day test checklist
 
-- Scan one known valid QR code: success shows the code first, followed by name.
+- Scan a QR containing a code and name: only the leading code appears in the
+  input and no attendance is recorded yet.
+- Scan another QR before submitting: the new code replaces the previous code.
+- Press **Check in** for one known valid code: success shows the code first,
+  followed by name.
 - Scan the same code again: **Already checked in**.
 - Enter a fake code manually: **Invalid code**, with no log row added.
 - Test camera permission and manual fallback on both iPhone and Android.

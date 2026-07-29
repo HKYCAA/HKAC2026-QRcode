@@ -17,7 +17,9 @@
       <header class="hero">
         <p class="eyebrow">HKAC 2026</p>
         <h1>Event check-in</h1>
-        <p class="hero-copy">Scan a student's QR code to mark attendance.</p>
+        <p class="hero-copy">
+          Scan a student's QR code, review the code, then check in.
+        </p>
       </header>
 
       <section class="panel scanner-panel" aria-labelledby="scanner-title">
@@ -31,15 +33,16 @@
 
         <div id="reader" aria-label="QR code camera scanner"></div>
         <p class="privacy-note">
-          Camera processing stays on this device. Only the scanned code is sent.
+          Camera processing stays on this device. The code is sent only after
+          you press Check in.
         </p>
       </section>
 
       <section class="panel manual-panel" aria-labelledby="manual-title">
         <div class="section-heading">
           <div>
-            <p class="step-label">Fallback</p>
-            <h2 id="manual-title">Enter code manually</h2>
+            <p class="step-label">Confirm</p>
+            <h2 id="manual-title">Review or enter code</h2>
           </div>
         </div>
 

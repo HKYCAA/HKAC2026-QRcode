@@ -1,7 +1,7 @@
 export function normalizeScannedCode(value) {
   const raw = String(value ?? "").trim();
 
-  if (!raw || raw.length > 128) {
+  if (!raw) {
     return "";
   }
 
@@ -11,14 +11,19 @@ export function normalizeScannedCode(value) {
       const queryCode = url.searchParams.get("code");
 
       if (queryCode) {
-        return queryCode.trim().toUpperCase();
+        return normalizeCodeToken(queryCode);
       }
     } catch {
       return "";
     }
   }
 
-  return raw.toUpperCase();
+  return normalizeCodeToken(raw);
+}
+
+function normalizeCodeToken(value) {
+  const code = String(value).trim().split(/\s+/, 1)[0];
+  return code && code.length <= 128 ? code.toUpperCase() : "";
 }
 
 export function resultPresentation(payload) {

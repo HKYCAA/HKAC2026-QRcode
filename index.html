@@ -32,9 +32,22 @@
         </div>
 
         <div id="reader" aria-label="QR code camera scanner"></div>
+        <p class="privacy-note">
+          Camera processing stays on this device. The code is sent only after
+          you press Check in.
+        </p>
+      </section>
+
+      <section class="panel manual-panel" aria-labelledby="manual-title">
+        <div class="section-heading">
+          <div>
+            <p class="step-label">Confirm</p>
+            <h2 id="manual-title">Review or enter code</h2>
+          </div>
+        </div>
 
         <form id="manual-form" class="manual-form" novalidate>
-          <label for="manual-code">Scanned or manual code</label>
+          <label for="manual-code">Unique code</label>
           <div class="input-row">
             <input
               id="manual-code"
@@ -50,11 +63,6 @@
             <button id="manual-submit" type="submit">Check in</button>
           </div>
         </form>
-
-        <p class="privacy-note">
-          Camera processing stays on this device. The code is sent only after
-          you press Check in.
-        </p>
       </section>
 
       <section

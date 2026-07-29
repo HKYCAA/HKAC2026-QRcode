@@ -106,6 +106,8 @@ clasp create-deployment \
 
 The site is a static application and needs no build step.
 
+Live site: <https://hkycaa.github.io/HKAC2026-QRcode/>
+
 1. Push `main` to GitHub.
 2. In the repository, open **Settings → Pages**.
 3. Under **Build and deployment**, choose **Deploy from a branch**.

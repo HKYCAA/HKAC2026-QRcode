@@ -13,7 +13,21 @@ const context = vm.createContext({
   JSON,
   String,
   Boolean,
-  decodeURIComponent
+  decodeURIComponent,
+  ContentService: {
+    MimeType: { JSON: "application/json" },
+    createTextOutput(body) {
+      return {
+        body,
+        setMimeType() {
+          return this;
+        }
+      };
+    }
+  },
+  SpreadsheetApp: {
+    flush() {}
+  }
 });
 
 vm.runInContext(source, context);
@@ -36,6 +50,30 @@ test("backend accepts form and JSON request bodies", () => {
   );
 });
 
+test("backend reads check-in and undo actions", () => {
+  assert.deepEqual(
+    {
+      ...context.readRequestPayload_({
+        parameter: { action: "undo", code: "ydq0621" }
+      })
+    },
+    { action: "undo", code: "YDQ0621" }
+  );
+  assert.deepEqual(
+    {
+      ...context.readRequestPayload_({
+        postData: {
+          contents: JSON.stringify({
+            action: "checkin",
+            code: "ydn0112"
+          })
+        }
+      })
+    },
+    { action: "checkin", code: "YDN0112" }
+  );
+});
+
 test("backend resolves exact live sheet headers", () => {
   const headers = ["YC", "Ind/Grp", "Code", "Name Chi", "Chi+Eng"];
 
@@ -44,4 +82,59 @@ test("backend resolves exact live sheet headers", () => {
     context.findHeaderColumn_(headers, ["Chi+Eng", "Name Chi"]),
     4
   );
+});
+
+test("undo removes the matching attendance row", () => {
+  const rows = [
+    ["Timestamp", "Code", "Name", "Source Row"],
+    ["2026-07-29 17:30:00", "YDQ0621", "盧珮淇 Asante, Judith Badu", "623"]
+  ];
+  const logSheet = {
+    getLastRow() {
+      return rows.length;
+    },
+    getRange(row, column) {
+      if (column === 2) {
+        return {
+          createTextFinder(code) {
+            return {
+              matchCase() {
+                return this;
+              },
+              matchEntireCell() {
+                return this;
+              },
+              matchFormulaText() {
+                return this;
+              },
+              findNext() {
+                const index = rows.findIndex(
+                  (values, rowIndex) =>
+                    rowIndex > 0 && values[1].toUpperCase() === code.toUpperCase()
+                );
+                return index === -1 ? null : { getRow: () => index + 1 };
+              }
+            };
+          }
+        };
+      }
+
+      return {
+        getDisplayValues() {
+          return [[...rows[row - 1]]];
+        }
+      };
+    },
+    deleteRow(row) {
+      rows.splice(row - 1, 1);
+    }
+  };
+
+  const response = context.undoCheckin_(logSheet, "YDQ0621");
+  const payload = JSON.parse(response.body);
+
+  assert.equal(payload.status, "undone");
+  assert.equal(payload.code, "YDQ0621");
+  assert.equal(payload.name, "盧珮淇 Asante, Judith Badu");
+  assert.equal(rows.length, 1);
 });

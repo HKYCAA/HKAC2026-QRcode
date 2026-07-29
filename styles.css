@@ -189,7 +189,7 @@ h2 {
 }
 
 .input-row button,
-.next-button {
+.undo-button {
   min-height: 3rem;
   padding: 0.7rem 1.1rem;
   border: 0;
@@ -200,7 +200,7 @@ h2 {
 }
 
 .input-row button:hover,
-.next-button:hover {
+.undo-button:hover {
   background: var(--navy-soft);
 }
 
@@ -329,9 +329,31 @@ input:disabled {
   font-size: 1.5rem;
 }
 
-.next-button {
+.undo-button {
   width: 100%;
-  background: var(--cyan);
+  border: 1px solid #fca5a5;
+  background: #fff;
+  color: var(--danger);
+}
+
+.undo-button:hover {
+  background: #fef2f2;
+}
+
+.result--undone {
+  border-color: #7dd3fc;
+  background: #f0f9ff;
+}
+
+.result--undone .result-icon {
+  background: #e0f2fe;
+  color: var(--cyan);
+  font-size: 0;
+}
+
+.result--undone .result-icon::before {
+  content: "↶";
+  font-size: 1.35rem;
 }
 
 footer {

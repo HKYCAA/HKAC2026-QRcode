@@ -51,3 +51,22 @@ test("uses the required duplicate and invalid messages", () => {
     "Invalid code"
   );
 });
+
+test("presents successful undo and missing check-in responses", () => {
+  assert.deepEqual(
+    resultPresentation({
+      status: "undone",
+      code: "YDQ0621",
+      name: "盧珮淇 Asante, Judith Badu"
+    }),
+    {
+      state: "undone",
+      title: "Check-in undone",
+      detail: "YDQ0621 盧珮淇 Asante, Judith Badu"
+    }
+  );
+  assert.equal(
+    resultPresentation({ status: "not_checked_in" }).title,
+    "Not checked in"
+  );
+});

@@ -59,6 +59,26 @@ export function resultPresentation(payload) {
     };
   }
 
+  if (status === "undone") {
+    const code = String(payload.code || "").trim();
+    const name = String(payload.name || "").trim();
+    const identity = [code, name].filter(Boolean).join(" ");
+
+    return {
+      state: "undone",
+      title: "Check-in undone",
+      detail: identity || "The attendance record was removed."
+    };
+  }
+
+  if (status === "not_checked_in") {
+    return {
+      state: "invalid",
+      title: "Not checked in",
+      detail: "No active attendance record was found for this code."
+    };
+  }
+
   return {
     state: "error",
     title: "Unable to check in",

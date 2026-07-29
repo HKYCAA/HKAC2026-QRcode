@@ -8,10 +8,13 @@ const elements = {
   result: document.querySelector("#result"),
   resultTitle: document.querySelector("#result-title"),
   resultDetail: document.querySelector("#result-detail"),
-  nextScan: document.querySelector("#next-scan")
+  undo: document.querySelector("#undo-checkin")
 };
 
 let isProcessing = false;
+let ignoredScanCode = "";
+let lastSuccessfulScanAt = 0;
+let undoableCode = "";
 let scanner;
 
 function setResult(presentation) {
@@ -20,24 +23,40 @@ function setResult(presentation) {
   elements.resultDetail.textContent = presentation.detail;
 }
 
-function setFormDisabled(disabled) {
-  elements.input.disabled = disabled;
-  elements.submit.disabled = disabled;
+function setProcessing(processing) {
+  isProcessing = processing;
+  elements.submit.disabled = processing;
+  elements.undo.disabled = processing;
 }
 
-function pauseScanner() {
-  try {
-    scanner?.pause(true);
-  } catch {
-    // The camera may not have started yet; manual entry still works.
-  }
+function setUndoableCode(code) {
+  undoableCode = normalizeScannedCode(code);
+  elements.undo.hidden = !undoableCode;
+  elements.undo.disabled = isProcessing;
 }
 
-function resumeScanner() {
+async function postAction(action, code) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
+
   try {
-    scanner?.resume();
-  } catch {
-    // The built-in scanner controls remain available if resume is not ready.
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+      },
+      body: new URLSearchParams({ action, code }),
+      redirect: "follow",
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
@@ -61,75 +80,96 @@ async function submitCode(rawCode) {
     return;
   }
 
-  isProcessing = true;
-  setFormDisabled(true);
-  pauseScanner();
-  elements.nextScan.hidden = true;
+  ignoredScanCode = code;
+  elements.input.value = "";
+  setUndoableCode("");
+  setProcessing(true);
   setResult({
     state: "loading",
     title: "Checking in…",
-    detail: code
+    detail: `${code} — the camera is ready for the next QR code.`
   });
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15000);
-
   try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-      },
-      body: new URLSearchParams({ code }),
-      redirect: "follow",
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const payload = await response.json();
+    const payload = await postAction("checkin", code);
     setResult(resultPresentation(payload));
+
+    if (payload.status === "success" || payload.status === "duplicate") {
+      setUndoableCode(payload.code || code);
+    }
   } catch (error) {
     console.error("Check-in request failed", error);
     setResult(resultPresentation({ status: "error" }));
   } finally {
-    window.clearTimeout(timeout);
-    elements.nextScan.hidden = false;
+    setProcessing(false);
   }
 }
 
-function resetForNextScan() {
-  isProcessing = false;
-  elements.input.value = "";
-  setFormDisabled(false);
-  elements.nextScan.hidden = true;
-  setResult({
-    state: "idle",
-    title: "Ready to scan",
-    detail: "Point the camera at a QR code or enter a code manually."
-  });
-  resumeScanner();
-}
+async function undoCheckin() {
+  const code = undoableCode;
 
-function onScanSuccess(decodedText) {
-  if (isProcessing) {
+  if (
+    isProcessing ||
+    !code ||
+    !window.confirm(`Undo check-in for ${code}?`)
+  ) {
     return;
   }
 
-  const code = normalizeScannedCode(decodedText);
+  setProcessing(true);
+  setResult({
+    state: "loading",
+    title: "Undoing check-in…",
+    detail: code
+  });
 
-  if (!code || elements.input.value === code) {
+  try {
+    const payload = await postAction("undo", code);
+    setResult(resultPresentation(payload));
+
+    if (payload.status === "undone" || payload.status === "not_checked_in") {
+      setUndoableCode("");
+    }
+  } catch (error) {
+    console.error("Undo request failed", error);
+    setResult(resultPresentation({ status: "error" }));
+  } finally {
+    setProcessing(false);
+  }
+}
+
+function onScanSuccess(decodedText) {
+  const code = normalizeScannedCode(decodedText);
+  lastSuccessfulScanAt = Date.now();
+
+  if (!code || code === ignoredScanCode) {
+    return;
+  }
+
+  ignoredScanCode = "";
+
+  if (elements.input.value === code) {
     return;
   }
 
   elements.input.value = code;
-  setResult({
-    state: "idle",
-    title: "Code ready",
-    detail: `${code} — press Check in to record attendance.`
-  });
+
+  if (!isProcessing) {
+    setResult({
+      state: "idle",
+      title: "Code ready",
+      detail: `${code} — press Check in to record attendance.`
+    });
+  }
+}
+
+function onScanFailure() {
+  if (
+    ignoredScanCode &&
+    Date.now() - lastSuccessfulScanAt > 1000
+  ) {
+    ignoredScanCode = "";
+  }
 }
 
 async function initializeScanner() {
@@ -158,7 +198,7 @@ async function initializeScanner() {
         aspectRatio: 1
       },
       onScanSuccess,
-      () => {}
+      onScanFailure
     );
   } catch (error) {
     console.error("Camera could not start", error);
@@ -173,6 +213,8 @@ elements.form.addEventListener("submit", event => {
   void submitCode(elements.input.value);
 });
 
-elements.nextScan.addEventListener("click", resetForNextScan);
+elements.undo.addEventListener("click", () => {
+  void undoCheckin();
+});
 
 initializeScanner();

@@ -10,10 +10,14 @@ Apps Script web app.
    attendee's phone browser.
 2. The frontend extracts the leading unique code and places it in the input.
 3. The operator reviews the code and presses **Check in**.
-4. The frontend posts the unique code to the Apps Script `doPost` endpoint.
+4. The frontend posts the unique code while the camera remains active for the
+   next QR code.
 5. Apps Script finds the code in `all!Code` in **HKAC 2026 full list**.
 6. A successful check-in is appended to the `qrcode-scan` tab.
-7. A script lock makes simultaneous scans safe and prevents duplicate rows.
+7. A short script lock covers only duplicate checking and attendance writes,
+   making simultaneous check-ins safe without serializing roster lookups.
+8. **Undo check-in** asks for confirmation and removes the matching attendance
+   row, allowing that code to check in again.
 
 The source `Code` column is read-only. The backend never writes to it.
 
@@ -124,7 +128,11 @@ Live site: <https://hkycaa.github.io/HKAC2026-QRcode/>
 - Scan another QR before submitting: the new code replaces the previous code.
 - Press **Check in** for one known valid code: success shows the code first,
   followed by name.
+- While the request is processing, scan a different QR: the camera remains
+  active and the next code appears in the input.
 - Scan the same code again: **Already checked in**.
+- Press **Undo check-in**, confirm it, then scan the same code again: the new
+  check-in should succeed.
 - Enter a fake code manually: **Invalid code**, with no log row added.
 - Test camera permission and manual fallback on both iPhone and Android.
 - Keep the Apps Script deployment URL private from casual editing, although the

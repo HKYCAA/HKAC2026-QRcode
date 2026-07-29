@@ -24,21 +24,13 @@ function doPost(e) {
   var hasLock = false;
 
   try {
-    var requestedCode = readRequestCode_(e);
+    var request = readRequestPayload_(e);
+    var requestedCode = request.code;
 
     if (!requestedCode) {
       return jsonResponse_({
         status: "invalid",
         message: "Invalid code"
-      });
-    }
-
-    hasLock = lock.tryLock(QR_CHECKIN_CONFIG.lockTimeoutMs);
-
-    if (!hasLock) {
-      return jsonResponse_({
-        status: "error",
-        message: "Check-in is busy. Please try again."
       });
     }
 
@@ -57,6 +49,23 @@ function doPost(e) {
     }
 
     assertLogSchema_(logSheet);
+
+    if (request.action === "undo") {
+      hasLock = lock.tryLock(QR_CHECKIN_CONFIG.lockTimeoutMs);
+
+      if (!hasLock) {
+        return busyResponse_();
+      }
+
+      return undoCheckin_(logSheet, requestedCode);
+    }
+
+    if (request.action !== "checkin") {
+      return jsonResponse_({
+        status: "error",
+        message: "Unsupported action"
+      });
+    }
 
     var headers = studentSheet
       .getRange(1, 1, 1, studentSheet.getLastColumn())
@@ -92,6 +101,12 @@ function doPost(e) {
       .getRange(sourceRow, nameColumn + 1)
       .getDisplayValue()
       .trim();
+
+    hasLock = lock.tryLock(QR_CHECKIN_CONFIG.lockTimeoutMs);
+
+    if (!hasLock) {
+      return busyResponse_();
+    }
 
     if (isDuplicateCode_(logSheet, canonicalCode)) {
       return jsonResponse_({
@@ -148,20 +163,32 @@ function authorizeCheckin() {
 }
 
 function readRequestCode_(e) {
+  return readRequestPayload_(e).code;
+}
+
+function readRequestPayload_(e) {
+  var rawAction = "checkin";
   var rawCode = "";
 
-  if (e && e.parameter && e.parameter.code) {
-    rawCode = e.parameter.code;
-  } else if (e && e.postData && e.postData.contents) {
+  if (e && e.parameter) {
+    rawAction = e.parameter.action || rawAction;
+    rawCode = e.parameter.code || rawCode;
+  }
+
+  if (!rawCode && e && e.postData && e.postData.contents) {
     try {
       var parsed = JSON.parse(e.postData.contents);
+      rawAction = parsed.action || rawAction;
       rawCode = parsed.code || "";
     } catch (error) {
       rawCode = "";
     }
   }
 
-  return normalizeCode_(rawCode);
+  return {
+    action: String(rawAction).trim().toLowerCase(),
+    code: normalizeCode_(rawCode)
+  };
 }
 
 function normalizeCode_(value) {
@@ -218,21 +245,57 @@ function findExactCode_(sheet, oneBasedColumn, code) {
 }
 
 function isDuplicateCode_(logSheet, code) {
+  return Boolean(findLogMatch_(logSheet, code));
+}
+
+function findLogMatch_(logSheet, code) {
   var lastRow = logSheet.getLastRow();
 
   if (lastRow < 2) {
-    return false;
+    return null;
   }
 
-  return Boolean(
-    logSheet
-      .getRange(2, 2, lastRow - 1, 1)
-      .createTextFinder(code)
-      .matchCase(false)
-      .matchEntireCell(true)
-      .matchFormulaText(false)
-      .findNext()
-  );
+  return logSheet
+    .getRange(2, 2, lastRow - 1, 1)
+    .createTextFinder(code)
+    .matchCase(false)
+    .matchEntireCell(true)
+    .matchFormulaText(false)
+    .findNext();
+}
+
+function undoCheckin_(logSheet, code) {
+  var match = findLogMatch_(logSheet, code);
+
+  if (!match) {
+    return jsonResponse_({
+      status: "not_checked_in",
+      message: "No active check-in found",
+      code: code
+    });
+  }
+
+  var row = match.getRow();
+  var values = logSheet.getRange(row, 1, 1, 4).getDisplayValues()[0];
+  var canonicalCode = normalizeCode_(values[1]);
+  var studentName = String(values[2] || "").trim();
+
+  logSheet.deleteRow(row);
+  SpreadsheetApp.flush();
+
+  return jsonResponse_({
+    status: "undone",
+    message: "Check-in undone",
+    code: canonicalCode,
+    name: studentName
+  });
+}
+
+function busyResponse_() {
+  return jsonResponse_({
+    status: "error",
+    message: "Check-in is busy. Please try again."
+  });
 }
 
 function assertLogSchema_(logSheet) {

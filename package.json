@@ -1,0 +1,10 @@
+{
+  "name": "hkac2026-qrcode",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check app.js && node --check core.js && node --check config.js && node --check QRCheckin.js"
+  }
+}
